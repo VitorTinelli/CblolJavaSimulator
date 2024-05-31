@@ -2,7 +2,6 @@ package dev.test.service;
 
 import java.util.*;
 import java.util.stream.Collectors;
-import dev.test.domain.MatchHistory;
 import dev.test.domain.Matches;
 import dev.test.domain.Teams;
 import dev.test.exceptions.BusinessException;
@@ -106,7 +105,17 @@ public class MatchesService {
     }
   }
 
-  public List<MatchHistory> simulateByDay(int day) {
+  public Matches simulateMatch(UUID uuid) {
+    Matches match = findByIdOrThrowBusinessException(uuid);
+    if (match.getWinner() != null) {
+      throw new BusinessException("Match already simulated");
+    }
+    match.setWinner(simulateMatch(match.getTeamA(), match.getTeamB()));
+    matchesRepository.save(match);
+    return match;
+  }
+
+  public List<Matches> simulateByDay(int day) {
     List<Matches> matches = matchesRepository.findByDay(day)
         .orElseThrow(() -> new BusinessException(MATCH_NOT_FOUND));
     if (matches.stream().anyMatch(match -> match.getWinner() != null)) {
@@ -116,9 +125,43 @@ public class MatchesService {
       match.setWinner(simulateMatch(match.getTeamA(), match.getTeamB()));
       matchesRepository.save(match);
     });
-    return matchesHistoryRepository.findByDay(day)
+    return matchesRepository.findByDay(day)
         .orElseThrow(() -> new BusinessException(MATCH_NOT_FOUND));
   }
 
+  public List<Matches> simulateByWeek(int week) {
+    List<Matches> matches1 = matchesRepository.findByDay(week * 2 - 1)
+        .orElseThrow(() -> new BusinessException(MATCH_NOT_FOUND));
+    List<Matches> matches2 = matchesRepository.findByDay(week * 2)
+        .orElseThrow(() -> new BusinessException(MATCH_NOT_FOUND));
+    if (matches1.stream().allMatch(match -> match.getWinner() == null)) {
+      matches1.forEach(match -> {
+        match.setWinner(simulateMatch(match.getTeamA(), match.getTeamB()));
+        matchesRepository.save(match);
+      });
+    }
+    if (matches2.stream().allMatch(match -> match.getWinner() == null)) {
+      matches2.forEach(match -> {
+        match.setWinner(simulateMatch(match.getTeamA(), match.getTeamB()));
+        matchesRepository.save(match);
+      });
+    }
+    return matchesRepository.findByWeek(week)
+        .orElseThrow(() -> new BusinessException(MATCH_NOT_FOUND));
+  }
 
+  public List<Matches> simulateAll() {
+    List<Matches> matches = matchesRepository.findAll();
+    matches.stream().filter(match -> match.getWinner() == null).forEach(match -> {
+      match.setWinner(simulateMatch(match.getTeamA(), match.getTeamB()));
+      matchesRepository.save(match);
+    });
+    return matchesRepository.findAll();
+  }
+
+  public void rematch(UUID id) {
+    Matches match = findByIdOrThrowBusinessException(id);
+    match.setWinner(null);
+    matchesRepository.save(match);
+  }
 }

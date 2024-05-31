@@ -11,4 +11,7 @@ import org.springframework.stereotype.Repository;
 public interface MatchHistoryRepository extends JpaRepository<MatchHistory, UUID> {
 
   Optional<List<MatchHistory>> findByDay(int day);
+
+  Optional<List<MatchHistory>> findByWeek(int week);
+
 }

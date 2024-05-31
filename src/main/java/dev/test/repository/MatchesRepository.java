@@ -13,4 +13,6 @@ public interface MatchesRepository extends JpaRepository<Matches, UUID> {
   Optional<Matches> findByTeamAAndTeamB(Teams teamA, Teams teamB);
 
   Optional<List<Matches>> findByDay(int day);
+
+  Optional<List<Matches>> findByWeek(int week);
 }
