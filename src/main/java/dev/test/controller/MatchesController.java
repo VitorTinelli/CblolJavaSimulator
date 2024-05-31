@@ -38,7 +38,7 @@ public class MatchesController {
   }
 
   @PostMapping("simulate/day")
-  public ResponseEntity<List<MatchHistory>> simulateByDay(@RequestBody int day) {
+  public ResponseEntity<List<MatchHistory>> simulateByDay(@RequestParam int day) {
     return ResponseEntity.ok(matchesService.simulateByDay(day));
   }
 

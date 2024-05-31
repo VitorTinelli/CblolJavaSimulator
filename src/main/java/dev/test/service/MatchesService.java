@@ -109,6 +109,9 @@ public class MatchesService {
   public List<MatchHistory> simulateByDay(int day) {
     List<Matches> matches = matchesRepository.findByDay(day)
         .orElseThrow(() -> new BusinessException(MATCH_NOT_FOUND));
+    if (matches.stream().anyMatch(match -> match.getWinner() != null)) {
+      throw new BusinessException("Matches already simulated");
+    }
     matches.forEach(match -> {
       match.setWinner(simulateMatch(match.getTeamA(), match.getTeamB()));
       matchesRepository.save(match);
@@ -116,5 +119,6 @@ public class MatchesService {
     return matchesHistoryRepository.findByDay(day)
         .orElseThrow(() -> new BusinessException(MATCH_NOT_FOUND));
   }
+
 
 }
