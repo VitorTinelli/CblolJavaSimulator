@@ -31,27 +31,27 @@ public class MatchesController {
     return ResponseEntity.ok(matchesService.findByTeamAAndTeamB(teamA, teamB));
   }
 
-  @GetMapping("/create")
+  @PostMapping("/create")
   public ResponseEntity<List<Matches>> createChampionshipMatches() {
     return ResponseEntity.ok(matchesService.createChampionshipMatches());
   }
 
-  @PostMapping("simulate/day")
+  @PutMapping("simulate/day")
   public ResponseEntity<List<Matches>> simulateByDay(@RequestParam int day) {
     return ResponseEntity.ok(matchesService.simulateByDay(day));
   }
 
-  @PostMapping("simulate/week")
+  @PutMapping("simulate/week")
   public ResponseEntity<List<Matches>> simulateByWeek(@RequestParam int week) {
     return ResponseEntity.ok(matchesService.simulateByWeek(week));
   }
 
-  @PostMapping("simulate/all")
+  @PutMapping("simulate/all")
   public ResponseEntity<List<Matches>> simulateAll() {
     return ResponseEntity.ok(matchesService.simulateAll());
   }
 
-  @PostMapping("rematch/{id}")
+  @PutMapping("rematch/{id}")
   public ResponseEntity<Matches> rematch(@PathVariable UUID id) {
     return ResponseEntity.ok(matchesService.rematch(id));
   }

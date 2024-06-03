@@ -9,5 +9,7 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface PlayOffMatchesRepository extends JpaRepository<PlayOffMatches, UUID> {
 
-  List<PlayOffMatches> findByPhase(String phase);
+  List<PlayOffMatches> findByPhaseSemi(String phase);
+
+  PlayOffMatches findByPhaseFinal(String phase);
 }

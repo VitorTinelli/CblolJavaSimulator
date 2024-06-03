@@ -14,14 +14,12 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class PlayOffMatchesService {
 
+  private static final String FINAL = "Final";
+  private static final String SEMI = "Semi-Final";
   private final PlayOffMatchesRepository playOffMatchesRepository;
   private final MatchesService matchesService;
   private final TeamsService teamsService;
   private final Map<Teams, Integer> map = new HashMap<>();
-  private Teams primeiro;
-  private Teams segundo;
-  private Teams terceiro;
-  private Teams quarto;
 
   public List<PlayOffMatches> listAll() {
     return playOffMatchesRepository.findAll();
@@ -47,30 +45,30 @@ public class PlayOffMatchesService {
         map.put(match.getWinner(), map.get(match.getWinner()) + 1);
       }
     });
-    primeiro = Collections.max(map.entrySet(), Map.Entry.comparingByValue()).getKey();
-    map.remove(primeiro);
-    segundo = Collections.max(map.entrySet(), Map.Entry.comparingByValue()).getKey();
-    map.remove(segundo);
-    terceiro = Collections.max(map.entrySet(), Map.Entry.comparingByValue()).getKey();
-    map.remove(terceiro);
-    quarto = Collections.max(map.entrySet(), Map.Entry.comparingByValue()).getKey();
+    Teams first = Collections.max(map.entrySet(), Map.Entry.comparingByValue()).getKey();
+    map.remove(first);
+    Teams second = Collections.max(map.entrySet(), Map.Entry.comparingByValue()).getKey();
+    map.remove(second);
+    Teams third = Collections.max(map.entrySet(), Map.Entry.comparingByValue()).getKey();
+    map.remove(third);
+    Teams fourth = Collections.max(map.entrySet(), Map.Entry.comparingByValue()).getKey();
 
     PlayOffMatches semi1 = PlayOffMatches.builder()
-        .teamA(primeiro)
-        .teamB(quarto)
-        .phase("Semi-Final")
+        .teamA(first)
+        .teamB(fourth)
+        .phase(SEMI)
         .build();
     playOffMatchesRepository.save(semi1);
     PlayOffMatches semi2 = PlayOffMatches.builder()
-        .teamA(segundo)
-        .teamB(terceiro)
-        .phase("Semi-Final")
+        .teamA(second)
+        .teamB(third)
+        .phase(SEMI)
         .build();
     playOffMatchesRepository.save(semi2);
     PlayOffMatches finalMatch = PlayOffMatches.builder()
         .teamA(null)
         .teamB(null)
-        .phase("Final")
+        .phase(FINAL)
         .build();
     playOffMatchesRepository.save(finalMatch);
     return playOffMatchesRepository.findAll();
@@ -80,7 +78,7 @@ public class PlayOffMatchesService {
     if (playOffMatchesRepository.findAll().isEmpty()) {
       throw new BusinessException("Matches not created");
     }
-    List<PlayOffMatches> matches = playOffMatchesRepository.findByPhase("Semi-Final");
+    List<PlayOffMatches> matches = playOffMatchesRepository.findByPhaseSemi(SEMI);
     if (matches.stream().anyMatch(match -> match.getWinner() != null)) {
       throw new BusinessException("Semis already simulated");
     }
@@ -88,13 +86,13 @@ public class PlayOffMatchesService {
       Teams winner = SimulateMatches.simulateMatch(match.getTeamA(), match.getTeamB());
       match.setWinner(winner);
       playOffMatchesRepository.save(match);
-      List<PlayOffMatches> aFinal = playOffMatchesRepository.findByPhase("Final");
-      if (aFinal.get(0).getTeamA() == null) {
-        aFinal.get(0).setTeamA(winner);
+      PlayOffMatches aFinal = playOffMatchesRepository.findByPhaseFinal(FINAL);
+      if (aFinal.getTeamA() == null) {
+        aFinal.setTeamA(winner);
       } else {
-        aFinal.get(0).setTeamB(winner);
+        aFinal.setTeamB(winner);
       }
-      playOffMatchesRepository.save(aFinal.get(0));
+      playOffMatchesRepository.save(aFinal);
     });
     return playOffMatchesRepository.findAll();
   }
@@ -103,17 +101,16 @@ public class PlayOffMatchesService {
     if (playOffMatchesRepository.findAll().isEmpty()) {
       throw new BusinessException("Matches not created");
     }
-    List<PlayOffMatches> matches = playOffMatchesRepository.findByPhase("Final");
-    if (matches.stream().anyMatch(match -> match.getTeamA() == null || match.getTeamB() == null)) {
+    PlayOffMatches aFinal = playOffMatchesRepository.findByPhaseFinal(FINAL);
+    if (aFinal.getWinner() != null) {
+      throw new BusinessException("Final already simulated");
+    }
+    if (aFinal.getTeamA() == null || aFinal.getTeamB() == null) {
       throw new BusinessException("Semis not finished yet");
     }
-    if (matches.stream().anyMatch(match -> match.getWinner() != null)) {
-      throw new BusinessException("Final already simulated, please create a new championship");
-    }
-    Teams winner = SimulateMatches.simulateMatch(matches.get(0).getTeamA(),
-        matches.get(0).getTeamB());
-    matches.get(0).setWinner(winner);
+    Teams winner = SimulateMatches.simulateMatch(aFinal.getTeamA(), aFinal.getTeamB());
+    aFinal.setWinner(winner);
     teamsService.increaseChampionships(winner.getId());
-    return playOffMatchesRepository.save(matches.get(0));
+    return playOffMatchesRepository.save(aFinal);
   }
 }
