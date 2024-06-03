@@ -75,10 +75,8 @@ public class PlayOffMatchesService {
   }
 
   public List<PlayOffMatches> simulateSemis() {
-    if (playOffMatchesRepository.findAll().isEmpty()) {
-      throw new BusinessException("Matches not created");
-    }
-    List<PlayOffMatches> matches = playOffMatchesRepository.findByPhaseSemi(SEMI);
+    List<PlayOffMatches> matches = playOffMatchesRepository.findByPhase(SEMI)
+        .orElseThrow(() -> new BusinessException("Matches not created"));
     if (matches.stream().anyMatch(match -> match.getWinner() != null)) {
       throw new BusinessException("Semis already simulated");
     }
@@ -86,7 +84,8 @@ public class PlayOffMatchesService {
       Teams winner = SimulateMatches.simulateMatch(match.getTeamA(), match.getTeamB());
       match.setWinner(winner);
       playOffMatchesRepository.save(match);
-      PlayOffMatches aFinal = playOffMatchesRepository.findByPhaseFinal(FINAL);
+      PlayOffMatches aFinal = playOffMatchesRepository.findByPhaseAndWinner(FINAL, null)
+          .orElseThrow(() -> new BusinessException("Final not created"));
       if (aFinal.getTeamA() == null) {
         aFinal.setTeamA(winner);
       } else {
@@ -98,13 +97,8 @@ public class PlayOffMatchesService {
   }
 
   public PlayOffMatches simulateFinal() {
-    if (playOffMatchesRepository.findAll().isEmpty()) {
-      throw new BusinessException("Matches not created");
-    }
-    PlayOffMatches aFinal = playOffMatchesRepository.findByPhaseFinal(FINAL);
-    if (aFinal.getWinner() != null) {
-      throw new BusinessException("Final already simulated");
-    }
+    PlayOffMatches aFinal = playOffMatchesRepository.findByPhaseAndWinner(FINAL, null)
+        .orElseThrow(() -> new BusinessException("Final not created"));
     if (aFinal.getTeamA() == null || aFinal.getTeamB() == null) {
       throw new BusinessException("Semis not finished yet");
     }

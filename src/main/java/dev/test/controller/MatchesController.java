@@ -56,5 +56,9 @@ public class MatchesController {
     return ResponseEntity.ok(matchesService.rematch(id));
   }
 
-
+  @DeleteMapping("restart")
+  public ResponseEntity<Void> restart() {
+    matchesService.restart();
+    return ResponseEntity.noContent().build();
+  }
 }

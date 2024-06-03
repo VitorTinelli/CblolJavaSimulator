@@ -6,6 +6,7 @@ import dev.test.domain.Matches;
 import dev.test.domain.Teams;
 import dev.test.exceptions.BusinessException;
 import dev.test.repository.MatchesRepository;
+import dev.test.repository.PlayOffMatchesRepository;
 import dev.test.utils.SimulateMatches;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -17,6 +18,7 @@ public class MatchesService {
   private static final String MATCH_NOT_FOUND = "Match not found";
   private final MatchesRepository matchesRepository;
   private final TeamsService teamsService;
+  private final PlayOffMatchesRepository playOffMatchesRepository;
   private final Random random = new Random();
   public List<Matches> listAll() {
     return matchesRepository.findAll().stream().sorted(Comparator.comparingInt(Matches::getDay))
@@ -153,5 +155,13 @@ public class MatchesService {
     match.setWinner(null);
     simulateMatch(id);
     return matchesRepository.save(match);
+  }
+
+  public void restart() {
+    if (matchesRepository.findAll().isEmpty() && playOffMatchesRepository.findAll().isEmpty()) {
+      throw new BusinessException("No matches to restart");
+    }
+    playOffMatchesRepository.deleteAll();
+    matchesRepository.deleteAll();
   }
 }
