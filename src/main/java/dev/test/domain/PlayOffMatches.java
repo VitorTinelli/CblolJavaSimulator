@@ -11,12 +11,12 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.GenericGenerator;
 
-@Data
+@Builder
+@Entity
 @AllArgsConstructor
 @NoArgsConstructor
-@Entity
-@Builder
-public class MatchHistory {
+@Data
+public class PlayOffMatches {
 
   @Id
   @GeneratedValue(generator = "uuid-hibernate-generator")
@@ -29,7 +29,7 @@ public class MatchHistory {
   private Teams teamB;
   @ManyToOne
   private Teams winner;
-  private int day;
-  private int week;
-  private int round;
+
+  private String phase;
 }
+

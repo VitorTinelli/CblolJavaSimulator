@@ -51,10 +51,9 @@ public class MatchesController {
     return ResponseEntity.ok(matchesService.simulateAll());
   }
 
-  @DeleteMapping("/{id}")
-  public ResponseEntity<Void> rematch(@PathVariable UUID id) {
-    matchesService.rematch(id);
-    return ResponseEntity.noContent().build();
+  @PostMapping("rematch/{id}")
+  public ResponseEntity<Matches> rematch(@PathVariable UUID id) {
+    return ResponseEntity.ok(matchesService.rematch(id));
   }
 
 

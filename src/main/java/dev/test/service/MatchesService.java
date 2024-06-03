@@ -5,8 +5,8 @@ import java.util.stream.Collectors;
 import dev.test.domain.Matches;
 import dev.test.domain.Teams;
 import dev.test.exceptions.BusinessException;
-import dev.test.repository.MatchHistoryRepository;
 import dev.test.repository.MatchesRepository;
+import dev.test.utils.SimulateMatches;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -16,10 +16,8 @@ public class MatchesService {
 
   private static final String MATCH_NOT_FOUND = "Match not found";
   private final MatchesRepository matchesRepository;
-  private final MatchHistoryRepository matchesHistoryRepository;
   private final TeamsService teamsService;
   private final Random random = new Random();
-
   public List<Matches> listAll() {
     return matchesRepository.findAll().stream().sorted(Comparator.comparingInt(Matches::getDay))
         .collect(Collectors.toList());
@@ -93,24 +91,12 @@ public class MatchesService {
     }
   }
 
-  private Teams simulateMatch(Teams teamA, Teams teamB) {
-    while (true) {
-      int teamAScore = random.nextInt(10);
-      int teamBScore = random.nextInt(10);
-      if (teamAScore > teamBScore) {
-        return teamA;
-      } else if (teamAScore < teamBScore) {
-        return teamB;
-      }
-    }
-  }
-
   public Matches simulateMatch(UUID uuid) {
     Matches match = findByIdOrThrowBusinessException(uuid);
     if (match.getWinner() != null) {
       throw new BusinessException("Match already simulated");
     }
-    match.setWinner(simulateMatch(match.getTeamA(), match.getTeamB()));
+    match.setWinner(SimulateMatches.simulateMatch(match.getTeamA(), match.getTeamB()));
     matchesRepository.save(match);
     return match;
   }
@@ -122,7 +108,7 @@ public class MatchesService {
       throw new BusinessException("Matches already simulated");
     }
     matches.forEach(match -> {
-      match.setWinner(simulateMatch(match.getTeamA(), match.getTeamB()));
+      match.setWinner(SimulateMatches.simulateMatch(match.getTeamA(), match.getTeamB()));
       matchesRepository.save(match);
     });
     return matchesRepository.findByDay(day)
@@ -136,13 +122,13 @@ public class MatchesService {
         .orElseThrow(() -> new BusinessException(MATCH_NOT_FOUND));
     if (matches1.stream().allMatch(match -> match.getWinner() == null)) {
       matches1.forEach(match -> {
-        match.setWinner(simulateMatch(match.getTeamA(), match.getTeamB()));
+        match.setWinner(SimulateMatches.simulateMatch(match.getTeamA(), match.getTeamB()));
         matchesRepository.save(match);
       });
     }
     if (matches2.stream().allMatch(match -> match.getWinner() == null)) {
       matches2.forEach(match -> {
-        match.setWinner(simulateMatch(match.getTeamA(), match.getTeamB()));
+        match.setWinner(SimulateMatches.simulateMatch(match.getTeamA(), match.getTeamB()));
         matchesRepository.save(match);
       });
     }
@@ -153,15 +139,19 @@ public class MatchesService {
   public List<Matches> simulateAll() {
     List<Matches> matches = matchesRepository.findAll();
     matches.stream().filter(match -> match.getWinner() == null).forEach(match -> {
-      match.setWinner(simulateMatch(match.getTeamA(), match.getTeamB()));
+      match.setWinner(SimulateMatches.simulateMatch(match.getTeamA(), match.getTeamB()));
       matchesRepository.save(match);
     });
     return matchesRepository.findAll();
   }
 
-  public void rematch(UUID id) {
+  public Matches rematch(UUID id) {
     Matches match = findByIdOrThrowBusinessException(id);
+    if (match.getWinner() == null) {
+      throw new BusinessException("Match not played yet");
+    }
     match.setWinner(null);
-    matchesRepository.save(match);
+    simulateMatch(id);
+    return matchesRepository.save(match);
   }
 }
