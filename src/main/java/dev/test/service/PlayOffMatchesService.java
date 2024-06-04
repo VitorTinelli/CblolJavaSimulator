@@ -39,19 +39,17 @@ public class PlayOffMatchesService {
     if (matches.stream().anyMatch(match -> match.getWinner() == null)) {
       throw new BusinessException("Point phase not finished yet");
     }
+
     teams.forEach(team -> map.put(team, 0));
-    matches.forEach(match -> {
-      if (match.getWinner() != null) {
-        map.put(match.getWinner(), map.get(match.getWinner()) + 1);
-      }
-    });
-    Teams first = Collections.max(map.entrySet(), Map.Entry.comparingByValue()).getKey();
-    map.remove(first);
-    Teams second = Collections.max(map.entrySet(), Map.Entry.comparingByValue()).getKey();
-    map.remove(second);
-    Teams third = Collections.max(map.entrySet(), Map.Entry.comparingByValue()).getKey();
-    map.remove(third);
-    Teams fourth = Collections.max(map.entrySet(), Map.Entry.comparingByValue()).getKey();
+    matches.forEach(match -> map.put(match.getWinner(), map.get(match.getWinner()) + 1));
+
+    List<Map.Entry<Teams, Integer>> matchesList = new ArrayList<>(map.entrySet());
+    matchesList.sort(Map.Entry.<Teams, Integer>comparingByValue().reversed());
+
+    Teams first = matchesList.get(0).getKey();
+    Teams second = matchesList.get(1).getKey();
+    Teams third = matchesList.get(2).getKey();
+    Teams fourth = matchesList.get(3).getKey();
 
     PlayOffMatches semi1 = PlayOffMatches.builder()
         .teamA(first)
@@ -75,6 +73,7 @@ public class PlayOffMatchesService {
   }
 
   public List<PlayOffMatches> simulateSemis() {
+    List<PlayOffMatches> simulatedMatches = new ArrayList<>();
     List<PlayOffMatches> matches = playOffMatchesRepository.findByPhase(SEMI)
         .orElseThrow(() -> new BusinessException("Matches not created"));
     if (matches.stream().anyMatch(match -> match.getWinner() != null)) {
@@ -83,17 +82,21 @@ public class PlayOffMatchesService {
     matches.forEach(match -> {
       Teams winner = SimulateMatches.simulateMatch(match.getTeamA(), match.getTeamB());
       match.setWinner(winner);
-      playOffMatchesRepository.save(match);
-      PlayOffMatches aFinal = playOffMatchesRepository.findByPhaseAndWinner(FINAL, null)
-          .orElseThrow(() -> new BusinessException("Final not created"));
-      if (aFinal.getTeamA() == null) {
-        aFinal.setTeamA(winner);
-      } else {
-        aFinal.setTeamB(winner);
-      }
-      playOffMatchesRepository.save(aFinal);
+      simulatedMatches.add(match);
+      defineFinal(winner);
     });
-    return playOffMatchesRepository.findAll();
+    return playOffMatchesRepository.saveAll(simulatedMatches);
+  }
+
+  private void defineFinal(Teams winner) {
+    PlayOffMatches aFinal = playOffMatchesRepository.findByPhaseAndWinner(FINAL, null)
+        .orElseThrow(() -> new BusinessException("Final not created"));
+    if (aFinal.getTeamA() == null) {
+      aFinal.setTeamA(winner);
+    } else {
+      aFinal.setTeamB(winner);
+    }
+    playOffMatchesRepository.save(aFinal);
   }
 
   public PlayOffMatches simulateFinal() {
